@@ -2863,6 +2863,11 @@ class CursorData {
   double hoty;
   final int width;
   final int height;
+  int _rasterWidth;
+  int _rasterHeight;
+
+  int get rasterWidth => _rasterWidth;
+  int get rasterHeight => _rasterHeight;
 
   CursorData({
     required this.peerId,
@@ -2874,31 +2879,28 @@ class CursorData {
     required this.hotyOrigin,
     required this.width,
     required this.height,
-  })  : hotx = hotxOrigin * scale,
+  })  : _rasterWidth = (width * scale).ceil(),
+        _rasterHeight = (height * scale).ceil(),
+        hotx = hotxOrigin * scale,
         hoty = hotyOrigin * scale;
 
   int _doubleToInt(double v) => (v * 10e6).round().toInt();
 
   double _checkUpdateScale(double scale) {
-    double oldScale = this.scale;
     if (scale != 1.0) {
-      // Update data if scale changed.
-      final tgtWidth = (width * scale).toInt();
-      final tgtHeight = (width * scale).toInt();
-      if (tgtWidth < kMinCursorSize || tgtHeight < kMinCursorSize) {
-        double sw = kMinCursorSize.toDouble() / width;
-        double sh = kMinCursorSize.toDouble() / height;
-        scale = sw < sh ? sh : sw;
-      }
+      // A thin cursor must not grow just to make its short edge reach the minimum.
+      scale = max(scale, kMinCursorSize / max(width, height));
     }
 
-    if (_doubleToInt(oldScale) != _doubleToInt(scale)) {
+    final targetWidth = (width * scale).ceil();
+    final targetHeight = (height * scale).ceil();
+    if (_rasterWidth != targetWidth || _rasterHeight != targetHeight) {
       if (isWindows) {
         data = img2
             .copyResize(
               image,
-              width: (width * scale).toInt(),
-              height: (height * scale).toInt(),
+              width: targetWidth,
+              height: targetHeight,
               interpolation: img2.Interpolation.average,
             )
             .getBytes(order: img2.ChannelOrder.bgra);
@@ -2907,13 +2909,15 @@ class CursorData {
           img2.encodePng(
             img2.copyResize(
               image,
-              width: (width * scale).toInt(),
-              height: (height * scale).toInt(),
+              width: targetWidth,
+              height: targetHeight,
               interpolation: img2.Interpolation.average,
             ),
           ),
         );
       }
+      _rasterWidth = targetWidth;
+      _rasterHeight = targetHeight;
     }
 
     this.scale = scale;
@@ -2924,7 +2928,7 @@ class CursorData {
 
   String updateGetKey(double scale) {
     scale = _checkUpdateScale(scale);
-    return '${peerId}_${id}_${_doubleToInt(width * scale)}_${_doubleToInt(height * scale)}';
+    return '${peerId}_${id}_${_doubleToInt(width * scale)}_${_doubleToInt(height * scale)}_${rasterWidth}_$rasterHeight';
   }
 }
 
@@ -3466,6 +3470,17 @@ class CursorModel with ChangeNotifier {
         return false;
       }
       data = imgBytes.buffer.asUint8List();
+      if (isDesktop &&
+          (parent.target?.ffiModel.isPeerLinux == true ||
+              parent.target?.ffiModel.pi.platform == kPeerPlatformWindows)) {
+        // PNG decoding supplies straight alpha for Linux/Windows cursor resizing.
+        final decoded = img2.decodePng(data);
+        if (decoded == null) {
+          debugPrint('Unable to decode cursor $id PNG for resizing');
+          return false;
+        }
+        imgOrigin = decoded;
+      }
     }
     final cache = CursorData(
       peerId: peerId,

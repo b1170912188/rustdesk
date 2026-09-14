@@ -1101,6 +1101,9 @@ class _ImagePaintState extends State<ImagePaint> {
     final m = Provider.of<ImageModel>(context);
     var c = Provider.of<CanvasModel>(context);
     final s = c.scale;
+    // CanvasModel caches the DPR and only refreshes it when the view style
+    // changes, so read it live to follow the window across monitors.
+    final dpr = MediaQuery.devicePixelRatioOf(context);
 
     bool isViewAdaptive() => c.viewStyle.style == kRemoteViewStyleAdaptive;
     bool isViewOriginal() => c.viewStyle.style == kRemoteViewStyleOriginal;
@@ -1112,11 +1115,20 @@ class _ImagePaintState extends State<ImagePaint> {
             if (isWindows) {
               // debug win10
               if (zoomCursor.value && isViewAdaptive()) {
-                cursorScale = s * c.devicePixelRatio;
+                cursorScale = s * dpr;
+              } else if (zoomCursor.value &&
+                  c.viewStyle.style == kRemoteViewStyleCustom) {
+                cursorScale = _getWindowsCustomCursorScale(c, m, dpr);
               }
             } else {
               if (zoomCursor.value || isViewOriginal()) {
                 cursorScale = s;
+              } else if (!isWeb) {
+                // NSCursor and GdkCursor treat the bitmap size as logical
+                // pixels, so an unzoomed cursor must be shrunk by the DPR to
+                // keep 1 remote px == 1 physical px, the size Original view
+                // already renders it at.
+                cursorScale = 1.0 / dpr;
               }
             }
             return cursorScale;
@@ -1191,6 +1203,25 @@ class _ImagePaintState extends State<ImagePaint> {
         return Container();
       }
     }
+  }
+
+  double _getWindowsCustomCursorScale(CanvasModel c, ImageModel m, double dpr) {
+    var scale = c.scale;
+    final peer = widget.ffi.ffiModel;
+    if (!peer.isPeerLinux) return scale * dpr;
+    if (peer.pi.currentDisplay == kAllDisplayValue) {
+      // Keep legacy sizing until the cursor's display is tracked in all-display view.
+      return 1.0;
+    }
+    final useTexture = m.useTextureRender || peer.pi.forceTextureRender;
+    final useScrollbar =
+        c.imageOverflow.isTrue && c.scrollStyle != ScrollStyle.scrollauto;
+    if (!useTexture && useScrollbar) return scale * dpr;
+    final displays = peer.pi.getCurDisplays();
+    if (displays.isNotEmpty) {
+      scale /= displays.first.scale;
+    }
+    return scale * dpr;
   }
 
   Widget _buildScrollbarNonTextureRender(
