@@ -1080,13 +1080,13 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
-    "https://admin.rustdesk.com".to_owned()
+    "https://rustdesk.cndlib.cn".to_owned()
 }
 
 #[inline]
 pub fn is_public(url: &str) -> bool {
     let url = url.to_ascii_lowercase();
-    url.contains("rustdesk.com/") || url.ends_with("rustdesk.com")
+    url.contains("rustdesk.cndlib.cn/") || url.ends_with("rustdesk.cndlib.cn")
 }
 
 pub fn get_udp_punch_enabled() -> bool {
@@ -2766,54 +2766,54 @@ mod tests {
 
     #[test]
     fn test_is_public() {
-        // Test URLs containing "rustdesk.com/"
-        assert!(is_public("https://rustdesk.com/"));
-        assert!(is_public("https://www.rustdesk.com/"));
-        assert!(is_public("https://api.rustdesk.com/v1"));
-        assert!(is_public("https://API.RUSTDESK.COM/v1"));
-        assert!(is_public("https://rustdesk.com/path"));
+        // Test URLs containing "rustdesk.cndlib.cn"
+        assert!(is_public("https://rustdesk.cndlib.cn/"));
+        assert!(is_public("https://rustdesk.cndlib.cn/"));
+        assert!(is_public("https://rustdesk.cndlib.cn"));
+        assert!(is_public("https://rustdesk.cndlib.cn"));
+        assert!(is_public("https://rustdesk.cndlib.cn"));
 
-        // Test URLs ending with "rustdesk.com"
-        assert!(is_public("rustdesk.com"));
-        assert!(is_public("https://rustdesk.com"));
-        assert!(is_public("https://RustDesk.com"));
-        assert!(is_public("http://www.rustdesk.com"));
-        assert!(is_public("https://api.rustdesk.com"));
+        // Test URLs ending with "rustdesk.cndlib.cn"
+        assert!(is_public("rustdesk.cndlib.cn"));
+        assert!(is_public("https://rustdesk.cndlib.cn"));
+        assert!(is_public("https://rustdesk.cndlib.cn"));
+        assert!(is_public("http://rustdesk.cndlib.cn"));
+        assert!(is_public("https://rustdesk.cndlib.cn"));
 
         // Test non-public URLs
-        assert!(!is_public("https://example.com"));
-        assert!(!is_public("https://custom-server.com"));
+        assert!(!is_public("https://rustdesk.cndlib.cn"));
+        assert!(!is_public("https://rustdesk.cndlib.cn"));
         assert!(!is_public("http://192.168.1.1"));
         assert!(!is_public("localhost"));
-        assert!(!is_public("https://rustdesk.computer.com"));
-        assert!(!is_public("rustdesk.comhello.com"));
+        assert!(!is_public("https://rustdesk.cndlib.cn"));
+        assert!(!is_public("rustdesk.cndlib.cn"));
     }
 
     #[test]
     fn test_should_use_tcp_proxy_for_api_url() {
         assert!(should_use_tcp_proxy_for_api_url(
-            "https://admin.example.com/api/login",
-            "https://admin.example.com"
+            "https://rustdesk.cndlib.cn",
+            "https://rustdesk.cndlib.cn"
         ));
         assert!(should_use_tcp_proxy_for_api_url(
-            "https://admin.example.com:21114/api/login",
-            "https://admin.example.com"
+            "https://rustdesk.cndlib.cn",
+            "https://rustdesk.cndlib.cn"
         ));
         assert!(!should_use_tcp_proxy_for_api_url(
-            "https://api.telegram.org/bot123/sendMessage",
-            "https://admin.example.com"
+            "https://rustdesk.cndlib.cn",
+            "https://rustdesk.cndlib.cn"
         ));
         assert!(!should_use_tcp_proxy_for_api_url(
-            "https://admin.rustdesk.com/api/login",
-            "https://admin.rustdesk.com"
+            "https://rustdesk.cndlib.cn",
+            "https://rustdesk.cndlib.cn"
         ));
         assert!(!should_use_tcp_proxy_for_api_url(
-            "https://admin.example.com/api/login",
+            "https://rustdesk.cndlib.cn",
             "not a url"
         ));
         assert!(!should_use_tcp_proxy_for_api_url(
             "not a url",
-            "https://admin.example.com"
+            "https://rustdesk.cndlib.cn"
         ));
     }
 
